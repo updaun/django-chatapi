@@ -203,26 +203,31 @@ class TestUserInfo(APITestCase):
         UserProfile.objects.create(user=user3, first_name="Adeyemi", last_name="Boseman",
                                    caption="it's all about testing", about="I'm a youtuber")
 
-        url = self.profile_url + "?keyword=ade"
-
-        response = self.client.get(url)
-        result = response.json()
-
-        # test keyword = adefemi oseni
+        
         url = self.profile_url + "?keyword=adefemi oseni"
 
         response = self.client.get(url)
-        result = response.json()
+        result = response.json()["results"]
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["user"]["username"], "test_user2")
+
+        url = self.profile_url + "?keyword=ade"
+
+        response = self.client.get(url)
+        result = response.json()["results"]
+        print(result)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["user"]["username"], "test_user2")
 
         # test keyword = ade
         url = self.profile_url + "?keyword=ade"
 
         response = self.client.get(url)
-        result = response.json()
+        result = response.json()["results"]
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(result), 2)
@@ -232,7 +237,7 @@ class TestUserInfo(APITestCase):
         url = self.profile_url + "?keyword=vester"
 
         response = self.client.get(url)
-        result = response.json()
+        result = response.json()["results"]
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(result), 1)
