@@ -212,6 +212,7 @@ class TestUserInfo(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["user"]["username"], "test_user2")
+        self.assertEqual(result[0]["message_count"], 0)
 
         url = self.profile_url + "?keyword=ade"
 
