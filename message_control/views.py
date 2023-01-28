@@ -17,7 +17,10 @@ def handleRequest(serializer):
     headers = {
         'Content-Type': 'application/json',
     }
-    requests.post(settings.SOCKET_SERVER, headers=headers, data=json.dumps(notification))
+    try:
+        requests.post(settings.SOCKET_SERVER, headers=headers, data=json.dumps(notification))
+    except Exception as e:
+        pass
     return True
 
 
@@ -84,6 +87,9 @@ class MessageView(ModelViewSet):
             message_data = self.get_object()
             return Response(self.serializer_class(message_data).data, status=200)
             
-        handleRequest(serializer)
+        try:
+            handleRequest(serializer)
+        except Exception as e:
+            pass
 
         return Response(serializer.data, status=200)
