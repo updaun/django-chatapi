@@ -86,10 +86,8 @@ class RefreshView(APIView):
             active_jwt = Jwt.objects.get(
                 refresh=serializer.validated_data["refresh"])
         except Jwt.DoesNotExist:
-            print("token error??????????")
             return Response({"error": "refresh token not found"}, status="400")
         if not Authentication.verify_token(serializer.validated_data["refresh"]):
-            print("token error!!!!!!!!!")
             return Response({"error": "Token is invalid or has expired"})
 
         access = get_access_token({"user_id": active_jwt.user.id})
@@ -113,7 +111,7 @@ class UserProfileView(ModelViewSet):
 
         if keyword:
             search_fields = (
-                "user__username", "first_name", "last_name"
+                "user__username", "first_name", "last_name", "user__email"
             )
             query = self.get_query(keyword, search_fields)
             return self.queryset.filter(query).distinct()

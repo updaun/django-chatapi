@@ -48,7 +48,8 @@ class TestAuth(APITestCase):
     def test_register(self):
         payload = {
             "username": "testuser1",
-            "password": "password1234"
+            "password": "password1234",
+            "email": "testemail@google.com"
         }
 
         response = self.client.post(self.register_url, data=payload)
@@ -59,7 +60,8 @@ class TestAuth(APITestCase):
     def test_login(self):
         payload = {
             "username": "testuser1",
-            "password": "password1234"
+            "password": "password1234",
+            "email": "testemail@google.com"
         }
 
         # register
@@ -79,7 +81,8 @@ class TestAuth(APITestCase):
     def test_refresh(self):
         payload = {
             "username": "testuser1",
-            "password": "password1234"
+            "password": "password1234",
+            "email": "testemail@google.com"
         }
 
         # register
@@ -106,7 +109,7 @@ class TestUserInfo(APITestCase):
 
     def setUp(self):
         self.user = CustomUser.objects._create_user(
-            username="test_user2", password="password1234")
+            username="test_user2", password="password1234", email="testemail3@google.co.kr")
         self.client.force_authenticate(user=self.user)
 
     def test_post_user_profile(self):
@@ -194,12 +197,12 @@ class TestUserInfo(APITestCase):
                                     caption="it's all about testing", about="I'm a developer")
 
         user2 = CustomUser.objects._create_user(
-            username="tester", password="tester1234")
+            username="tester", password="tester1234", email="testemail4@google.co.kr")
         UserProfile.objects.create(user=user2, first_name="Vester", last_name="Mango",
                                     caption="it's all about testing", about="I'm a developer")
 
         user3 = CustomUser.objects._create_user(
-            username="vasman", password="vasman123")
+            username="vasman", password="vasman123", email="testemail5@google.co.kr")
         UserProfile.objects.create(user=user3, first_name="Adeyemi", last_name="Boseman",
                                    caption="it's all about testing", about="I'm a youtuber")
 

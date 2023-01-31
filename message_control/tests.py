@@ -45,7 +45,7 @@ class TestMessage(APITestCase):
         from user_control.models import CustomUser, UserProfile
 
         # sender
-        self.sender = CustomUser.objects._create_user("sender", "sender123")
+        self.sender = CustomUser.objects._create_user("sender", "sender123", email="testemail2@google.com")
         UserProfile.objects.create(
             first_name="sender",
             last_name="sender",
@@ -55,7 +55,7 @@ class TestMessage(APITestCase):
         )
 
         # receiver
-        self.receiver = CustomUser.objects._create_user("receiver", "receiver123")
+        self.receiver = CustomUser.objects._create_user("receiver", "receiver123", email="testemail3@google.com")
         UserProfile.objects.create(
             first_name="receiver",
             last_name="receiver",
