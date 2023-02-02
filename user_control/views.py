@@ -1,20 +1,18 @@
 import jwt
-from .models import CustomUser, Jwt, UserProfile
+from .models import CustomUser, Jwt, UserProfile, Favorite
 from datetime import datetime, timedelta
 from django.conf import settings
 import random
 import string
 from rest_framework.views import APIView
-from .serializers import LoginSerializer, RegisterSerializer, RefreshSerializer, UserProfileSerializer
+from .serializers import LoginSerializer, RegisterSerializer, RefreshSerializer, UserProfileSerializer, FavoriteSerializer
 from django.contrib.auth import authenticate
 from rest_framework.response import Response
 from .authentication import Authentication
 from config.custom_methods import IsAuthenticatedCustom
 from rest_framework.viewsets import ModelViewSet
 import re
-from django.db.models import Q
-import requests
-from rest_framework.pagination import PageNumberPagination
+from django.db.models import Q, Count, OuterRef
 
 
 def get_random(length):
@@ -116,6 +114,7 @@ class RefreshView(APIView):
 class UserProfileView(ModelViewSet):
     queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer
+    permission_classes = (IsAuthenticatedCustom, )
 
     def get_queryset(self):
         data = self.request.query_params.dict()
@@ -123,7 +122,7 @@ class UserProfileView(ModelViewSet):
 
         if keyword:
             search_fields = (
-                "user__username", "first_name", "last_name", "user__email"
+                "user__username", "first_name", "last_name"
             )
             query = self.get_query(keyword, search_fields)
             return self.queryset.filter(query).distinct()
@@ -132,14 +131,13 @@ class UserProfileView(ModelViewSet):
 
     @staticmethod
     def get_query(query_string, search_fields):
+        ''' Returns a query, that is a combination of Q objects. That combination
+            aims to search keywords within a model by testing the given search fields.
         '''
-        Returns a query, that is a combination of Q objects. That combination
-        aims to search keywords within a model by testing the given search fields.
-        '''
-        query = None
+        query = None  # Query to search for every search term
         terms = UserProfileView.normalize_query(query_string)
         for term in terms:
-            or_query = None
+            or_query = None  # Query to search for a given term in each field
             for field_name in search_fields:
                 q = Q(**{"%s__icontains" % field_name: term})
                 if or_query is None:
@@ -154,13 +152,11 @@ class UserProfileView(ModelViewSet):
 
     @staticmethod
     def normalize_query(query_string, findterms=re.compile(r'"([^"]+)"|(\S+)').findall, normspace=re.compile(r'\s{2,}').sub):
-        '''
-        Splits the query string in invidual keywords, getting rid of unnecessary spaces
-        and grouping quoted words together.
-        Example:
-
-        >>> normalize_query(' some random words "with  quotes " and  space')
-        ['some', 'random', 'words', 'with quotes', 'and', 'space']
+        ''' Splits the query string in invidual keywords, getting rid of unecessary spaces
+            and grouping quoted words together.
+            Example:
+            >>> normalize_query('  some random  words "with   quotes  " and   spaces')
+            ['some', 'random', 'words', 'with quotes', 'and', 'spaces']
         '''
         return [normspace(' ', (t[0] or t[1]).strip()) for t in findterms(query_string)]
 
@@ -180,3 +176,54 @@ class MeView(APIView):
                 }
             }
         return Response(data, status=200)
+
+
+class LogoutView(APIView):
+    permission_classes = (IsAuthenticatedCustom, )
+
+    def get(self, request):
+        user_id = request.user.id
+
+        Jwt.objects.filter(user_id=user_id).delete()
+
+        return Response("logged out successfully", status=200)
+
+
+class UpdateFavoriteView(APIView):
+    permission_classes = (IsAuthenticatedCustom,)
+    serializer_class = FavoriteSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            favorite_user = CustomUser.objects.get(id=serializer.validated_data["favorite_id"])
+        except Exception:
+            raise Exception("Favorite user does not exist")
+
+        try:
+            fav = request.user.user_favorites
+        except Exception:
+            fav = Favorite.objects.create(user_id=request.user.id)
+
+        favorite = fav.favorite.filter(id=favorite_user.id)
+        if favorite:
+            fav.favorite.remove(favorite_user)
+            return Response("removed")
+
+        fav.favorite.add(favorite_user)
+        return Response("added")
+
+
+class CheckIsFavoriteView(APIView):
+    permission_classes = (IsAuthenticatedCustom,)
+
+    def get(self, request, *args, **kwargs):
+        favorite_id = kwargs.get("favorite_id", None)
+        try:
+            favorite = request.user.user_favorites.favorite.filter(id=favorite_id)
+            if favorite:
+                return Response(True)
+            return Response(False)
+        except Exception:
+            return Response(False)
