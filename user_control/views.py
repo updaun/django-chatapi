@@ -117,18 +117,24 @@ class UserProfileView(ModelViewSet):
     permission_classes = (IsAuthenticatedCustom, )
 
     def get_queryset(self):
+        if self.request.method.lower() != "get":
+            return self.queryset
+
         data = self.request.query_params.dict()
-        keyword = data.get("keyword", None)
+        keyword = data.pop("keyword", None)
 
         if keyword:
             search_fields = (
-                "user__username", "first_name", "last_name"
+                "user__username", "first_name", "last_name", "user__email"
             )
             query = self.get_query(keyword, search_fields)
-            return self.queryset.filter(query).distinct()
+            try:
+                return self.queryset.filter(query).filter(**data).exclude(Q(user_id=self.request.user.id) | Q(user__is_superuser=True)).distinct()
+            except Exception as e:
+                raise Exception(e)
 
-        return self.queryset
-
+        return self.queryset.filter(**data).exclude(Q(user_id=self.request.user.id) | Q(user__is_superuser=True)).distinct()
+                        
     @staticmethod
     def get_query(query_string, search_fields):
         ''' Returns a query, that is a combination of Q objects. That combination

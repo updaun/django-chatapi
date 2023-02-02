@@ -106,14 +106,24 @@ class TestAuth(APITestCase):
 class TestUserInfo(APITestCase):
     profile_url = "/user/profile"
     file_upload_url = "/message/file-upload"
+    login_url = "/user/login"
 
     def setUp(self):
-        self.user = CustomUser.objects._create_user(
-            username="test_user2", password="password1234", email="testemail3@google.co.kr")
-        self.client.force_authenticate(user=self.user)
+        payload = {
+            "username": "test_user2",
+            "password": "password1234",
+            "email": "testemail3@google.co.kr"
+        }
+        self.user = CustomUser.objects._create_user(**payload)
+        
+        # login
+        response = self.client.post(self.login_url, data=payload)
+        result = response.json()
+
+        self.bearer = {
+            'HTTP_AUTHORIZATION': 'Bearer {}'.format(result['access'])}
 
     def test_post_user_profile(self):
-
         payload = {
             "user_id" : self.user.id,
             "first_name": "Test",
@@ -122,7 +132,7 @@ class TestUserInfo(APITestCase):
             "about": "I am a passionation lover of ART, graphics and creation"
         }
 
-        response = self.client.post(self.profile_url, data=payload)
+        response = self.client.post(self.profile_url, data=payload, **self.bearer)
         result = response.json()
 
         self.assertEqual(response.status_code, 201)
@@ -141,7 +151,7 @@ class TestUserInfo(APITestCase):
         }
 
         # processing
-        response = self.client.post(self.file_upload_url, data=data)
+        response = self.client.post(self.file_upload_url, data=data, **self.bearer)
         result = response.json()
 
         payload = {
@@ -153,7 +163,7 @@ class TestUserInfo(APITestCase):
             "profile_picture_id": result["id"]
         }
 
-        response = self.client.post(self.profile_url, data=payload)
+        response = self.client.post(self.profile_url, data=payload, **self.bearer)
         result = response.json()
 
         self.assertEqual(response.status_code, 201)
@@ -173,7 +183,7 @@ class TestUserInfo(APITestCase):
             "about": "I am a passionation lover of ART, graphics and creation"
         }
 
-        response = self.client.post(self.profile_url, data=payload)
+        response = self.client.post(self.profile_url, data=payload, **self.bearer)
         result = response.json()
 
         # --- created profile
@@ -183,7 +193,7 @@ class TestUserInfo(APITestCase):
             "last_name": "USER3",
         }
 
-        response = self.client.patch(self.profile_url + f"/{result['id']}", data=payload)
+        response = self.client.patch(self.profile_url + f"/{result['id']}", data=payload, **self.bearer)
         result = response.json()
 
         self.assertEqual(response.status_code, 200)
@@ -209,38 +219,35 @@ class TestUserInfo(APITestCase):
         
         url = self.profile_url + "?keyword=adefemi oseni"
 
-        response = self.client.get(url)
+        response = self.client.get(url, **self.bearer)
+        result = response.json()["results"]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(result), 0)
+
+        url = self.profile_url + "?keyword=ade"
+
+        response = self.client.get(url, **self.bearer)
         result = response.json()["results"]
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["user"]["username"], "test_user2")
-        self.assertEqual(result[0]["message_count"], 0)
-
-        url = self.profile_url + "?keyword=ade"
-
-        response = self.client.get(url)
-        result = response.json()["results"]
-        print(result)
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["user"]["username"], "test_user2")
+        self.assertEqual(result[0]["user"]["username"], "vasman")
 
         # test keyword = ade
         url = self.profile_url + "?keyword=ade"
 
-        response = self.client.get(url)
+        response = self.client.get(url, **self.bearer)
         result = response.json()["results"]
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[1]["user"]["username"], "vasman")
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["user"]["username"], "vasman")
 
         # test keyword = vester
         url = self.profile_url + "?keyword=vester"
 
-        response = self.client.get(url)
+        response = self.client.get(url, **self.bearer)
         result = response.json()["results"]
 
         self.assertEqual(response.status_code, 200)
